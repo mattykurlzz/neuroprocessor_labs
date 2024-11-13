@@ -7,11 +7,13 @@
 #include <systemc>
 
 SC_MODULE(ACCELERATOR) {
-    sc_core::sc_in<fixed32_t> energy_i[ACCELERATOR_THREADS];
-    sc_core::sc_in<fixed32_t> weight_i[ACCELERATOR_THREADS];
-    sc_core::sc_in<bool> start_i;
-    sc_core::sc_in<bool> last_iter_i;
-    sc_core::sc_out<fixed32_t> value_o;
+    sc_core::sc_in<bool> start_i;                        // from PE+
+    sc_core::sc_in<float> data_i[ACCELERATOR_THREADS];   // from PE+
+    sc_core::sc_in<float> weight_i[ACCELERATOR_THREADS]; // from PE+
+    sc_core::sc_in<bool> last_iter_i;                    // from PE+
+
+    sc_core::sc_out<float> value_o;     // to PE+
+    sc_core::sc_out<bool> data_ready_o; // to PE+
 
     SC_HAS_PROCESS(ACCELERATOR);
 
