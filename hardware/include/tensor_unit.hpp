@@ -8,44 +8,56 @@
 #include "types.hpp"
 
 #include <systemc>
+using namespace sc_core;
 
 SC_MODULE(TENSOR_UNIT) {
-    sc_core::sc_signal<bool> start_o;           // from CU to CSU
-    sc_core::sc_signal<int> input_cnt_o;        // from CU to SCU
-    sc_core::sc_signal<int> hidden_layer_cnt_o; // from CU to SCU
-    sc_core::sc_signal<int> output_cnt_o;       // from CU to SCU
-    sc_core::sc_signal<int> neurons_in_layer_o; // from CU to SCU
+    std::vector<float> shared_memory_data;
+    std::vector<std::vector<std::vector<float>>> shared_memory_weight;
+    std::vector<float> shared_memory_result;
+
+    int input_cnt, hidden_layer_cnt, output_cnt, neurons_in_layer;
+    sc_event int_data_ready;
 
     /* internals */
-    sc_core::sc_out<bool> data_ready_o; // from TU to CSU+
-    sc_core::sc_in<bool> load_data_i;   // from CSU to PE+
-    sc_core::sc_in<bool> finish_i;      // from CSU
-    sc_core::sc_in<bool> busy_i;        // from CSU+ to CU
+    sc_out<bool> start_o;
+    sc_out<int> input_cnt_o;        // from TU+`
+    sc_out<int> hidden_layer_cnt_o; // from TU+
+    sc_out<int> output_cnt_o;       // from TU+
+    sc_out<int> neurons_in_layer_o; // from TU+
 
-    sc_core::sc_out<float> pe_inputs_o[PE_THREADS][PE_ACCELERATED_THREADS][ACCELERATOR_THREADS]; // from TU+ to PE+
-    sc_core::sc_out<float> pe_data_o[PE_THREADS][ACCELERATOR_THREADS];                           // from TU+ to PE+
-    sc_core::sc_in<float> pe_value_i[PE_THREADS][ACCELERATOR_THREADS];                           // from PE+ to TU+
+    sc_out<bool> data_ready_o;
+    sc_out<float> pe_weights_o[PE_THREADS][PE_ACCELERATED_THREADS][ACCELERATOR_THREADS];
+    sc_out<float> pe_data_o[ACCELERATOR_THREADS];
 
-    PE* processing_elements[PE_THREADS];
-    CONTROL_SIGNAL_UNIT* control_signal_unit;
-    sc_core::sc_fifo<float> local_input_data;
-    sc_core::sc_fifo<float> local_next_input_data;
-    float local_weight_memory[PE_THREADS][PE_ACCELERATED_THREADS][INPUT_DATA_SIZE];
-    float local_iter_weight_memory[PE_THREADS][PE_ACCELERATED_THREADS][ACCELERATOR_THREADS];
+    sc_in<bool> load_data_i;
+    sc_in<bool> busy_i;
+    sc_in<float> pe_value_i[PE_THREADS][PE_ACCELERATED_THREADS];
+
+    float local_input_data[INPUT_DATA_SIZE];
+    float local_next_input_data[INPUT_DATA_SIZE];
 
     int weights_ready_flag;
 
+    float local_weight_memory[PE_THREADS][PE_ACCELERATED_THREADS][INPUT_DATA_SIZE];
+
+    PE* processing_elements[PE_THREADS];
+    CONTROL_SIGNAL_UNIT* control_signal_unit;
+
     SC_HAS_PROCESS(TENSOR_UNIT);
 
-    TENSOR_UNIT(sc_core::sc_module_name name);
+    TENSOR_UNIT(sc_module_name name, int input_cnt, int hidden_layers_cnt, int outputs_cnt, int neurons_in_layer_cnt);
     ~TENSOR_UNIT();
 
     void load_local_input_data();
     void load_local_weight_data();
-    void transfer_local_weights_to_pe();
+    void transfer_locals_to_pe();
     void transfer_pe_to_next();
     void load_result();
+
     void init();
+    void set_shared_memory(std::vector<float> & shared_memory_data,
+                           std::vector<std::vector<std::vector<float>>> & shared_memory_weight,
+                           std::vector<float> & shared_memory_result);
 };
 
 #endif
